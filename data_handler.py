@@ -14,8 +14,8 @@ from langchain.embeddings import HuggingFaceEmbeddings
 import csv
 
 MAX_TEXT_LENGTH = 512
-HOTEL_DATA = "data/pdfs/"  # Change this to the actual path
-YELP_DATA = "data/DOE/edubasealldata20240108.csv"  # Change this to the actual path
+HOTEL_DATA = "C:\Users\jessi\OneDrive\Documents\Masters\Dissertation\Disso Project\Datasets\hotel_data.csv"  # Change this to the actual path
+YELP_DATA = "C:\Users\jessi\OneDrive\Documents\Masters\Dissertation\Disso Project\Datasets\yelp_data.csv"  # Change this to the actual path
 RELEVANCE_THRESHOLD = 0.7
 
 class LoadCSV:
