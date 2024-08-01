@@ -18,47 +18,19 @@ HOTEL_DATA = "C:\Users\jessi\OneDrive\Documents\Masters\Dissertation\Disso Proje
 YELP_DATA = "C:\Users\jessi\OneDrive\Documents\Masters\Dissertation\Disso Project\Datasets\yelp_data.csv"  # Change this to the actual path
 RELEVANCE_THRESHOLD = 0.7
 
-class LoadCSV:
-    def __init__(self, file_path):
-        self.file_path = file_path
 
-    def load(self):
-        documents = []
-        with open(self.file_path, newline='', encoding='utf-8') as csvfile:
-            reader = csv.reader(csvfile)
-            for row in reader:
-                documents.append(' '.join(row))
-        return documents
 
-class DocumentProcessor:
-    def create_csv_vector_store(self, csv_folder_path):
-        all_documents = []
-        loaders = [LoadCSV(os.path.join(csv_folder_path, fn)) for fn in os.listdir(csv_folder_path) if fn.endswith('.csv')]
-        
-        for loader in loaders:
-            csv_docs = loader.load()
-            for doc in csv_docs:
-                text_splitter = CharacterTextSplitter(
-                    separator="\n\n",
-                    chunk_size=800,
-                    chunk_overlap=100,
-                    length_function=len,
-                )
-                documents = text_splitter.split_documents([Document(page_content=doc)])
-                all_documents.extend(documents)
+class Data_Handler:
 
-        hf_embeddings = self.create_hf_embeddings()
-        
-        try:
-            faiss_db = FAISS.load_local('faiss_csv_index', hf_embeddings)
-        except:
-            faiss_db = FAISS.from_documents(all_documents, hf_embeddings)
-            faiss_db.save_local("faiss_csv_index")
+    def __init__(self, embedding_model="sentence-transformers/all-mpnet-base-v2"):
 
-        return faiss_db
+        self.embedding_model = embedding_model
+        self.yelp_vector_store = self.create_csv_vector_store(YELP_DATA)
+        self.hotel_vector_store = self.create_csv_vector_store(HOTEL_DATA)
+
 
     def create_hf_embeddings(self):
-        model_name = "sentence-transformers/all-mpnet-base-v2"
+        model_name =  self.embedding_model
         hf_embeddings = HuggingFaceEmbeddings(model_name=model_name)
         return hf_embeddings
 
@@ -75,8 +47,8 @@ class DocumentProcessor:
         df['extra_description'] = df.apply(self.create_extra_description, axis=1)
         return df
 
-    def create_doe_vector_store(self):
-        df = pd.read_csv(YELP_DATA, header=0)
+    def create_csv_vector_store(self, csv_path):
+        df = pd.read_csv(csv_path, header=0)
         df = self.preprocess_data(df)
         hf_embeddings = self.create_hf_embeddings()
 
@@ -109,15 +81,6 @@ class DocumentProcessor:
 
         return False
 
-class DataOperator:
-    def __init__(self):
-        self.processor = DocumentProcessor()
-        self.yelp_data = self.processor.create_doe_vector_store()
-        self.hotel_data = self.processor.create_csv_vector_store(HOTEL_DATA)
-
-    def auto_truncate(self, val):
-        return val[:MAX_TEXT_LENGTH]
-
     def vector_search_hotel_csv(self, query):
         return self.processor.vector_search(query, self.hotel_data)
 
@@ -125,6 +88,9 @@ class DataOperator:
         return self.processor.vector_search(query, self.yelp_data)
 
 
-data_operator = DataOperator()
-result = data_operator.vector_search_yelp_csv("query about YELP data")
+
+
+travel_data_handler = Data_Handler()
+travel_data_handler
+result = travel_data_handler.vector_search_yelp_csv("query about YELP data")
 print(result)

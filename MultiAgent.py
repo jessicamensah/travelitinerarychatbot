@@ -13,6 +13,7 @@ def limit_words(prompt, max_words):
     if len(words) > max_words:
         return ' '.join(words[:max_words]) + "..."
     return prompt
+
 def travel_convo(message, history, question_count):
     try:
         # Check if we have already asked the maximum number of questions
