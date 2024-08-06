@@ -76,7 +76,7 @@ class Data_Handler:
         return df
     def create_csv_vector_store(self, csv_path):
         try:
-            df = pd.read_csv(csv_path, header=0, encoding='utf-8')
+            df = pd.read_csv(csv_path, header=0, encoding='utf-8').sample(n=10000, random_state=1)
         except UnicodeDecodeError:
             df = pd.read_csv(csv_path, header=0, encoding='ISO-8859-1')
         df = self.preprocess_data(df)
@@ -97,15 +97,16 @@ class Data_Handler:
         :return: FAISS vector store.
         """
         vectorstore = FAISS.from_texts(text_chunks, embeddings)
-        vectorstore.save_local("faiss_text_chunks_index")
         return vectorstore
+    
     def vector_search(self, query, faiss_vector_store, top_k=4):
         relevant_docs = faiss_vector_store.similarity_search(query, k=top_k)
-        is_relevant = self.are_docs_relevant_to_query(query, relevant_docs)
-        return {"docs": relevant_docs, "are_relevant": is_relevant}
-    def are_docs_relevant_to_query(self, query, relevant_docs):
-        hf_embeddings = self.create_hf_embeddings()
-        query_embedding = hf_embeddings.embed(query)
+#        is_relevant = self.are_docs_relevant_to_query(query, relevant_docs)
+        return {"docs": relevant_docs, "are_relevant": True}
+    
+ #   def are_docs_relevant_to_query(self, query, relevant_docs):
+ #       hf_embeddings = self.create_hf_embeddings()
+ #       query_embedding = hf_embeddings.embed(query)
         
         for doc in relevant_docs:
             doc_embedding = hf_embeddings.embed(doc.page_content)
@@ -115,8 +116,10 @@ class Data_Handler:
         return False
     def vector_search_hotel_csv(self, query):
         return self.vector_search(query, self.hotel_vector_store)
+    
     def vector_search_yelp_csv(self, query):
         return self.vector_search(query, self.yelp_vector_store)
+    
 # Instantiate and use the Data_Handler
 if __name__ == "__main__":
     data_handler = Data_Handler()
