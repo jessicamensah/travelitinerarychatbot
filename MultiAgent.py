@@ -20,7 +20,13 @@ class TravelAssistant:
     def vector_search(self, query):
         # Perform vector search on user input
         results = self.vector_store.similarity_search(query)
-        return results
+        return results 
+     # use the results of the vector search in a prompt ask our llm to make a recommendation
+        
+        prompt = (
+            "Travel itinerary agent. Based on the chat history, provide recommendations or ask for more info. "
+            "Chat history: " + query + "\n"
+        )
 
 # Function to count words in a string
 def word_count(s):
