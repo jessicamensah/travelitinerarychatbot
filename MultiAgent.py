@@ -20,13 +20,23 @@ class TravelAssistant:
     def vector_search(self, query):
         # Perform vector search on user input
         results = self.vector_store.similarity_search(query)
-        return results 
-     # use the results of the vector search in a prompt ask our llm to make a recommendation
-        
+        return results
+
+        # Use the results of the vector search in a prompt to ask the LLM for a recommendation
         prompt = (
             "Travel itinerary agent. Based on the chat history, provide recommendations or ask for more info. "
             "Chat history: " + query + "\n"
         )
+        # Limit the prompt to a specific number of words
+        prompt = limit_words(prompt, 100)  # Adjust the word limit as needed
+        llm = Ollama(model="llama-7b")
+        response = llm.invoke(prompt)
+
+        # Post-processing check for hallucinations
+        if "fabricated" in response or "assumption" in response:
+            return "The response seems to contain hallucinations. Please provide more details."
+        
+        return response
 
 # Function to count words in a string
 def word_count(s):
@@ -117,3 +127,4 @@ iface = gr.Interface(
 )
 
 iface.launch(share=True)
+
