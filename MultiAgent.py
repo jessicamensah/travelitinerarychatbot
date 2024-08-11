@@ -4,22 +4,21 @@ from data_handler import Data_Handler
 from langchain.vectorstores import FAISS
 from langchain.embeddings.openai import OpenAIEmbeddings
 
-# Initialize the chat history
-chat_history = []
+
+chat_history = [] # show the chat history
 
 # Maximum number of follow-up questions
 MAX_QUESTIONS = 3
 
-# Define the TravelAssistant class
-class TravelAssistant:
-    def __init__(self, index_file='index.faiss'):
+class TravelAssistant:  #
+    def __init__(self, index_file='C:/Users/jessi/OneDrive/Documents/Masters/Dissertation/Disso Project/Final Project/faiss_hotel_index'):
         # Initialize embeddings and load index for vector search
-        self.embeddings = OpenAIEmbeddings()
-        self.vector_store = FAISS.load_local(index_file, self.embeddings)
+        self.embeddings = OpenAIEmbeddings(openai_api_key="-") # to embed the vector
+        self.vector_store = FAISS.load_local(index_file, self.embeddings, allow_dangerous_deserialization=True)
 
-    def vector_search(self, query):
+    def vector_search(self, query): #function to create a similarity search
         # Perform vector search on user input
-        results = self.vector_store.similarity_search(query)
+        results = self.vector_store.similarity_search(query) 
         return results
 
         # Use the results of the vector search in a prompt to ask the LLM for a recommendation
@@ -29,7 +28,7 @@ class TravelAssistant:
         )
         # Limit the prompt to a specific number of words
         prompt = limit_words(prompt, 100)  # Adjust the word limit as needed
-        llm = Ollama(model="llama-7b")
+        llm = Ollama(model="phi3:3.8b")
         response = llm.invoke(prompt)
 
         # Post-processing check for hallucinations
@@ -60,20 +59,8 @@ def travel_convo(message, history, question_count):
             assistant = TravelAssistant()
             results = assistant.vector_search(history)
             
-            # Use the results of the vector search in a prompt to ask the LLM for a recommendation
-            prompt = (
-                "Travel itinerary agent. Based on the chat history, provide recommendations or ask for more info. "
-                "Chat history: " + history + "\n" + message
-            )
-            # Limit the prompt to a specific number of words
-            prompt = limit_words(prompt, 100)  # Adjust the word limit as needed
-            llm = Ollama(model="llama-7b")
-            response = llm.invoke(prompt)
-            
-            # Post-processing check for hallucinations
-            if "fabricated" in response or "assumption" in response:
-                return "The response seems to contain hallucinations. Please provide more details."
-            
+            # Generate a recommendation based on the search results and conversation history
+            response = assistant.generate_recommendation(message, history)
             return response
         else:
             return "I need more information to provide a recommendation."
@@ -85,9 +72,10 @@ def is_enough_info_for_search(message, history):
     # The purpose of this function is to determine whether we have enough information from the user to do a vector search
     enough_information = False
     # Append the latest message to the chat history list 
-    chat_history = history.append(message)
-    # Convert the historical list to a string/text format 
-    chat_history_text = "\n".join(chat_history)
+    chat_history_text = history + "\n" + message
+    # chat_history = history + [message]
+    # # Convert the historical list to a string/text format 
+    # chat_history_text = "\n".join(chat_history)
     
     prompt = (
         "You are a Travel Itinerary Agent. You are trying to figure out if you can make a good travel recommendation to a customer. "
@@ -100,7 +88,10 @@ def is_enough_info_for_search(message, history):
     # Send the prompt to the LLM
     # Read the LLM's response; if the response is "no," set enough_information to False; if "yes," set it to True
     
-    return enough_information
+    llm = Ollama(model="phi3:3.8b")
+    response = llm.invoke(prompt)
+
+    return "yes" in response.lower()
 
 def gradio_interface(message):
     global chat_history
@@ -127,4 +118,3 @@ iface = gr.Interface(
 )
 
 iface.launch(share=True)
-
