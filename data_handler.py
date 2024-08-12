@@ -29,6 +29,7 @@ class Data_Handler:
         self.print_csv_headers(YELP_DATA)  # Print headers for debugging
         self.yelp_vector_store = self.create_csv_vector_store(YELP_DATA)
         self.hotel_vector_store = self.load_existing_vector_store("faiss_index")
+
     def load_existing_vector_store(self, index_path):
         """Load an existing FAISS vector store, or create a new one if not found."""
         hf_embeddings = self.create_hf_embeddings()
@@ -83,11 +84,11 @@ class Data_Handler:
         hf_embeddings = self.create_hf_embeddings()
         text_chunks = df['extra_description'].tolist()
         try:
-            vectorstore = FAISS.load_local('faiss_yelp_index', hf_embeddings, allow_dangerous_serialization=True)
+            vectorstore = FAISS.load_local('faiss_yelp_index2', hf_embeddings, allow_dangerous_serialization=True)
         except Exception as e:
             print(f"Error loading FAISS vector store: {e}")
             vectorstore = self.create_vector_store_from_texts(text_chunks, hf_embeddings)
-            vectorstore.save_local("faiss_yelp_index")
+            vectorstore.save_local("faiss_yelp_index2")
         return vectorstore
     def create_vector_store_from_texts(self, text_chunks, embeddings):
         """
@@ -103,6 +104,12 @@ class Data_Handler:
         relevant_docs = faiss_vector_store.similarity_search(query, k=top_k)
 #        is_relevant = self.are_docs_relevant_to_query(query, relevant_docs)
         return {"docs": relevant_docs, "are_relevant": True}
+    
+    def yelp_vector_search(self, query, top_k=4):
+        return self.vector_search(query, self.yelp_vector_store, top_k)
+    
+    def hotel_vector_search(self, query, top_k=4):
+        return self.vector_search(query, self.hotel_vector_store, top_k)
     
  #   def are_docs_relevant_to_query(self, query, relevant_docs):
  #       hf_embeddings = self.create_hf_embeddings()
