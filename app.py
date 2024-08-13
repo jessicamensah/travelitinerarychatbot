@@ -35,3 +35,10 @@ with gr.Blocks() as demo:
 
 demo.launch(share=True,
     server_port=8080)
+
+
+# import ipaddress  
+  
+# random_ip = ipaddress.IPv4Address(random.randint(0, 2**32 - 1))  
+# print(random_ip)
+
