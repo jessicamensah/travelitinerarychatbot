@@ -7,14 +7,17 @@ from langchain_community.vectorstores.faiss import FAISS
 from langchain.docstore.document import Document
 from langchain.text_splitter import CharacterTextSplitter
 import shutil
+
 # Set environment variables
 os.environ['TRANSFORMERS_CACHE'] = 'C:/Users/jessi/.cache/huggingface'
 os.environ['HF_HUB_DISABLE_SYMLINKS_WARNING'] = '1'
+
 # Constants
 MAX_TEXT_LENGTH = 512
 HOTEL_DATA = "C:/Users/jessi/OneDrive/Documents/Masters/Dissertation/Disso Project/Datasets/hotel_data.csv"
 YELP_DATA = "C:/Users/jessi/OneDrive/Documents/Masters/Dissertation/Disso Project/Datasets/yelp_data.csv"
 RELEVANCE_THRESHOLD = 0.7
+
 # Load model from cache
 model_name = 'sentence-transformers/all-mpnet-base-v2'
 try:
@@ -23,12 +26,14 @@ try:
     print("Model loaded successfully from cache!")
 except Exception as e:
     print(f"Error loading model: {e}")
+    
 class Data_Handler:
-    def __init__(self, embedding_model="sentence-transformers/all-mpnet-base-v2"):
+    def __init__(self, embedding_model="sentence-transformers/all-mpnet-base-v2", yelp_vector_store_path="faiss_index2", hotel_vector_store_path="faiss_index"):
         self.embedding_model = embedding_model
         self.print_csv_headers(YELP_DATA)  # Print headers for debugging
         self.yelp_vector_store = self.create_csv_vector_store(YELP_DATA)
-        self.hotel_vector_store = self.load_existing_vector_store("faiss_index")
+        self.hotel_vector_store = self.load_existing_vector_store("faiss_index2", "faiss_hotel")
+
 
     def load_existing_vector_store(self, index_path):
         """Load an existing FAISS vector store, or create a new one if not found."""
