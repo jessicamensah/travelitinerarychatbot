@@ -14,8 +14,8 @@ os.environ['HF_HUB_DISABLE_SYMLINKS_WARNING'] = '1'
 
 # Constants
 MAX_TEXT_LENGTH = 512
-HOTEL_DATA = "C:/Users/jessi/OneDrive/Documents/Masters/Dissertation/Disso Project/Datasets/hotel_data.csv"
-YELP_DATA = "C:/Users/jessi/OneDrive/Documents/Masters/Dissertation/Disso Project/Datasets/yelp_data.csv"
+HOTEL_DATA = "C:/Users/jessi/OneDrive/Documents/Masters/Dissertation/Disso Project/Datasets/yelp_data0608.csv"
+YELP_DATA = "C:/Users/jessi/OneDrive/Documents/Masters/Dissertation/Disso Project/Datasets/yelp_data0608.csv"
 RELEVANCE_THRESHOLD = 0.7
 
 # Load model from cache
@@ -28,29 +28,33 @@ except Exception as e:
     print(f"Error loading model: {e}")
     
 class Data_Handler:
-    def __init__(self, embedding_model="sentence-transformers/all-mpnet-base-v2", yelp_vector_store_path="faiss_index2", hotel_vector_store_path="faiss_index"):
+    def __init__(self, embedding_model="sentence-transformers/all-mpnet-base-v2", yelp_vector_store_path="faiss_yelp_index2", hotel_vector_store_path="faiss_hotel_index", hotel_csv_path="C:/Users/jessi/OneDrive/Documents/Masters/Dissertation/Disso Project/Datasets/hotel_data.csv", yelp_csv_path="C:/Users/jessi/OneDrive/Documents/Masters/Dissertation/Disso Project/Datasets/yelp_data0608.csv"):
         self.embedding_model = embedding_model
+        self.hotel_vector_store_path = hotel_vector_store_path
+        self.yelp_vector_store_path = yelp_vector_store_path
         self.print_csv_headers(YELP_DATA)  # Print headers for debugging
-        self.yelp_vector_store = self.create_csv_vector_store(YELP_DATA)
-        self.hotel_vector_store = self.load_existing_vector_store("faiss_index2", "faiss_hotel")
+        self.hotel_vector_store = self.load_vector_store(hotel_vector_store_path, hotel_csv_path)
+        self.yelp_vector_store = self.load_vector_store(yelp_vector_store_path, yelp_csv_path)
 
 
-    def load_existing_vector_store(self, index_path):
+    def load_vector_store(self, index_path, csv_path):
         """Load an existing FAISS vector store, or create a new one if not found."""
         hf_embeddings = self.create_hf_embeddings()
         try:
-            vectorstore = FAISS.load_local(index_path, hf_embeddings, allow_dangerous_serialization=True)
+            vectorstore = FAISS.load_local(index_path, hf_embeddings, allow_dangerous_deserialization=True)
             print(f"FAISS vector store loaded from {index_path}")
         except FileNotFoundError:
             print(f"FAISS vector store not found at {index_path}, creating a new one from Yelp data...")
-            df = pd.read_csv(YELP_DATA, header=0, encoding='utf-8')
-            df = self.preprocess_data(df)
+            df = pd.read_csv(csv_path, header=0, encoding='utf-8')
+            if index_path == self.hotel_vector_store_path:
+                df = self.hotel_preprocess_data(df)
+            else:
+                df = self.yelp_preprocess_data(df)
+
             vectorstore = self.create_vector_store_from_texts(df['extra_description'].tolist(), hf_embeddings)
             vectorstore.save_local(index_path)
-        except Exception as e:
-            print(f"Error loading FAISS vector store from {index_path}: {e}")
-            vectorstore = None
         return vectorstore
+    
     def print_csv_headers(self, csv_path):
         """Prints out the headers of the CSV file."""
         try:
@@ -62,7 +66,7 @@ class Data_Handler:
         model_name = self.embedding_model
         hf_embeddings = HuggingFaceEmbeddings(model_name=model_name)
         return hf_embeddings
-    def create_extra_description(self, row):
+    def create_extra_hotel_description(self, row):
         try:
             description = (
                 f" Wow! {row['cityName']} is very beautiful and I'd surely recommend {row['HotelName']}. "
@@ -77,9 +81,31 @@ class Data_Handler:
                     description += f"{col.capitalize()}: {row[col]}. "
             print(f"Warning: {missing_column} column is missing.")
         return description
-    def preprocess_data(self, df):
-        df['extra_description'] = df.apply(self.create_extra_description, axis=1)
+    
+    def create_extra_yelp_description(self, row):
+        try:
+            description = (
+                f"{row['city']} is a lovely place to visit and I'd surely recommend {row['name']}. "
+                f"If {row['categories']} activities are your thing, this is the best place to visit! "
+                f"The rating for this establishment is {row['stars']} so im sure you would enjoy it."
+            )
+        except KeyError as e:
+            missing_column = e.args[0]
+            description = f"Information missing for {missing_column}. "
+            for col in ['city', 'state', 'attributes', 'categories', 'is_open', 'hours', 'stars']:
+                if col in row:
+                    description += f"{col.capitalize()}: {row[col]}. "
+            print(f"Warning: {missing_column} column is missing.")
+        return description
+    
+    def yelp_preprocess_data(self, df):
+        df['extra_description'] = df.apply(self.create_extra_yelp_description, axis=1)
         return df
+    
+    def hotel_preprocess_data(self, df):
+        df['extra_description'] = df.apply(self.create_extra_hotel_description, axis=1)
+        return df
+    
     def create_csv_vector_store(self, csv_path):
         try:
             df = pd.read_csv(csv_path, header=0, encoding='utf-8').sample(n=10000, random_state=1)
@@ -105,15 +131,15 @@ class Data_Handler:
         vectorstore = FAISS.from_texts(text_chunks, embeddings)
         return vectorstore
     
-    def vector_search(self, query, faiss_vector_store, top_k=4):
+    def vector_search(self, query, faiss_vector_store, top_k=1):
         relevant_docs = faiss_vector_store.similarity_search(query, k=top_k)
 #        is_relevant = self.are_docs_relevant_to_query(query, relevant_docs)
         return {"docs": relevant_docs, "are_relevant": True}
     
-    def yelp_vector_search(self, query, top_k=4):
+    def yelp_vector_search(self, query, top_k=1):
         return self.vector_search(query, self.yelp_vector_store, top_k)
     
-    def hotel_vector_search(self, query, top_k=4):
+    def hotel_vector_search(self, query, top_k=1):
         return self.vector_search(query, self.hotel_vector_store, top_k)
     
  #   def are_docs_relevant_to_query(self, query, relevant_docs):
