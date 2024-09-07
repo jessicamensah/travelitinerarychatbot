@@ -15,15 +15,22 @@ def multiagent_convo(message, history):
     Returns:
         tuple: A tuple containing an empty string and the updated history
     """
+
     bot_message = travel_convo_instance.travel_convo(message, history)
+
+    # Check if bot_message is None and handle it
+    if bot_message is None:
+        bot_message = "[No response generated]"
+
+    # Print the bot message after ensuring it's not None
+    print('this is the bot message below ' + bot_message)
+
+    # Append to history if history is not None
     if history is not None:
         history.append((message, bot_message))
+
+    # Return the updated history
     return "", history
-
-# message = "id like to go to Rome , find a nice hotel"
-# chat_history = [[]]
-# print(multiagent_convo(message, chat_history))
-
 
 # create chatbot using gradio
 with gr.Blocks() as demo:
@@ -35,10 +42,3 @@ with gr.Blocks() as demo:
 
 demo.launch(share=True,
     server_port=8080)
-
-
-# import ipaddress  
-  
-# random_ip = ipaddress.IPv4Address(random.randint(0, 2**32 - 1))  
-# print(random_ip)
-
